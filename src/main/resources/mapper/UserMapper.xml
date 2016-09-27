@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="cn.leepon.mapper.UserMapper">
+
+   <select id="getUserInfoByName" resultType="cn.leepon.po.UserInfo" parameterType="java.lang.String">
+   
+       SELECT 
+		   t.username username,
+		   t.password password,
+		   t.role role
+       FROM t_user t 
+       WHERE `status` ='1'
+       AND t.username = #{username}
+ 
+   </select>
+   
+</mapper>
