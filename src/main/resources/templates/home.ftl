@@ -19,6 +19,8 @@
 <#list authlist as auth>
    ${auth}
 </#list>
+</br>
+在线人数：${loginNum}
     
  
  </body>

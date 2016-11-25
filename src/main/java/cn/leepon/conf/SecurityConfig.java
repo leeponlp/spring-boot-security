@@ -1,14 +1,18 @@
 package cn.leepon.conf;
 
 import java.io.IOException;
+import java.util.Arrays;
+
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.SecurityProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -17,12 +21,20 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.core.session.SessionRegistryImpl;
+import org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy;
+import org.springframework.security.web.authentication.session.ConcurrentSessionControlAuthenticationStrategy;
+import org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy;
+import org.springframework.security.web.authentication.session.SessionFixationProtectionStrategy;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
+import org.springframework.security.web.session.ConcurrentSessionFilter;
 import org.springframework.security.web.session.SessionManagementFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.WebUtils;
+
 import cn.leepon.service.impl.UserDetailServiceImpl;
 
 /**
@@ -55,13 +67,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		  //.antMatchers("/css/**", "/js/**", "/webjars/**").permitAll()
 		  //.antMatchers("/").permitAll()
           //.antMatchers("/user").hasRole("ADMIN")
-		  .anyRequest().fullyAuthenticated()
+		  .anyRequest().authenticated()
 		  .and().csrf().csrfTokenRepository(csrfTokenRepository())
           .and().addFilterAfter(csrfHeaderFilter(), SessionManagementFilter.class);
 		http
 		  .formLogin()
-		  .loginProcessingUrl("/login")
-		  //.loginPage("/login")
+		  //.loginProcessingUrl("/login")
+		  .loginPage("/login")
 		  .failureUrl("/login?error")
 		  .permitAll()
 		  .and()
@@ -73,6 +85,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		http
 		  .exceptionHandling()
 		  .accessDeniedHandler(new DefaultAccessDeniedHandler());
+//		  .and()
+//          .sessionManagement()
+//          .maximumSessions(3).maxSessionsPreventsLogin(true)
+//          .sessionRegistry(sessionRegistry()); 
+		
+		http.sessionManagement()
+		    .sessionAuthenticationStrategy(sessionAuthenticationStrategy())
+		    .and()
+		    .addFilter(concurrentSessionFilter());
 //		http
 //		  .rememberMe()
 //		  .rememberMeCookieName("")
@@ -122,5 +143,34 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	        //repository.setSessionAttributeName(("X-XSRF-TOKEN"));
 	        return repository;
 	    }
-	
+
+	    //注册自定义的SessionRegistry
+	    @Bean    
+	    public SessionRegistry sessionRegistry(){    
+	        return new SessionRegistryImpl();    
+	    }    
+	    
+	    //注册自定义的sessionAuthenticationStrategy
+	    //ConcurrentSessionControlAuthenticationStrategy控制并发
+	    //SessionFixationProtectionStrategy可以防盗session
+	    //RegisterSessionAuthenticationStrategy触发了注册新sessin
+	    @Bean
+	    public CompositeSessionAuthenticationStrategy sessionAuthenticationStrategy(){
+	    	ConcurrentSessionControlAuthenticationStrategy concurrentSessionControlAuthenticationStrategy=new ConcurrentSessionControlAuthenticationStrategy(sessionRegistry());
+	    	concurrentSessionControlAuthenticationStrategy.setMaximumSessions(2);
+	    	concurrentSessionControlAuthenticationStrategy.setExceptionIfMaximumExceeded(true);
+	    	SessionFixationProtectionStrategy sessionFixationProtectionStrategy=new SessionFixationProtectionStrategy();
+	    	RegisterSessionAuthenticationStrategy registerSessionStrategy = new RegisterSessionAuthenticationStrategy(sessionRegistry());
+	    	CompositeSessionAuthenticationStrategy sessionAuthenticationStrategy=new CompositeSessionAuthenticationStrategy(
+	    			Arrays.asList(concurrentSessionControlAuthenticationStrategy,sessionFixationProtectionStrategy,registerSessionStrategy));
+	    	return sessionAuthenticationStrategy;
+	    }
+	    
+	    //注册并发Session Filter
+	    @Bean
+	    public ConcurrentSessionFilter concurrentSessionFilter(){
+	    	return new ConcurrentSessionFilter(sessionRegistry(),"/login?expired");
+	    }
+	    
+	    	
 }

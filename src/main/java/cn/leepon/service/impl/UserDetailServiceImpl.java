@@ -10,7 +10,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
 import cn.leepon.mapper.UserMapper;
 import cn.leepon.po.UserInfo;
 
@@ -25,6 +24,8 @@ public class UserDetailServiceImpl implements UserDetailsService{
 
 	@Autowired
 	UserMapper userMapper;
+	
+	
 	
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -42,6 +43,8 @@ public class UserDetailServiceImpl implements UserDetailsService{
 		
 		return userDetails;
 	}
+	
+	
 	
 
 }
